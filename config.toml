@@ -1,0 +1,62 @@
+timezone = "Europe/Helsinki"
+
+[site]
+base_url = "https://anyrouter.top/"
+checkin_url = "https://anyrouter.top/dashboard"
+
+[schedule]
+times = ["08:30", "12:30", "20:30"]
+
+[notify]
+enable_email = true
+success_email_once_per_day = true
+email_on_failure_always = true
+
+[notify.smtp]
+host = "smtp.example.com"
+port = 465
+use_ssl = true
+use_starttls = false
+username = "bot@example.com"
+password = "YOUR_APP_PASSWORD"
+from = "AnyRouter Bot <bot@example.com>"
+to = ["ops@example.com"]
+
+[run]
+headless_preferred = true
+fallback_to_headed_on_retry = true
+nav_timeout_ms = 20000
+action_timeout_ms = 15000
+max_retries = 3
+retry_backoff_seconds = [1.0, 4.0, 9.0]
+history_limit = 1000
+screenshot_on_failure = true
+trace_on_failure = false
+log_max_bytes = 1048576
+log_backup_count = 7
+
+[selectors]
+login_required = [
+  "text=Sign in with GitHub",
+  "text=Authorize",
+]
+login_confirmed = [
+  "text=Dashboard",
+  "text=签到",
+]
+checkin_triggers = [
+  "role=button[name=\"Check-in\"]",
+  "text=签到",
+  "text=Check in",
+]
+success_indicators = [
+  "text=签到成功",
+  "text=Success",
+]
+already_checked = [
+  "text=今日已签到",
+  "text=Already checked in",
+]
+
+[logging]
+log_file = "data/logs/signin.jsonl"

@@ -1,0 +1,16 @@
+[Unit]
+Description=AnyRouter automated check-in
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/anyrouter-auto
+ExecStart=/usr/bin/python3 /opt/anyrouter-auto/src/signin.py
+User=anyrouter
+Group=anyrouter
+Environment=PYTHONUNBUFFERED=1
+Environment=TZ=Europe/Helsinki
+
+[Install]
+WantedBy=multi-user.target
