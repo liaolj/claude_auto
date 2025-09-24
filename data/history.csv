@@ -1,1 +1,4 @@
 ts,run_id,stage,result,error_code,retry_count,duration_ms,notes
+2025-09-24T22:42:34.086025+08:00,6eb16ece4f6b4d9580b376e7f9df3f1b,AUTH,AUTH_OK,,0,103915,GitHub OAuth completed
+2025-09-24T22:58:12.026079+08:00,e134a393cb574ea7a21aef3448e93e1f,CHECKIN,CHECKIN_OK,,0,93590,Success indicator detected
+2025-09-24T23:08:34.890244+08:00,605ee17dbe144bfa85a26732cbf5f2f4,CHECKIN,CHECKIN_OK,,0,93889,Success indicator detected
