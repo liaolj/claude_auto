@@ -1,0 +1,8 @@
+# Core runtime dependencies
+playwright>=1.45
+# ``tomli`` provides ``tomllib`` for Python versions prior to 3.11
+tomli>=2.0.1; python_version < "3.11"
+tzdata>=2023.3
+
+# Tooling / tests
+pytest>=8.0
