@@ -1,8 +1,10 @@
 """Email notification helpers."""
 from __future__ import annotations
 
+import logging
 import mimetypes
 import smtplib
+from contextlib import suppress
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Iterable, Optional
@@ -15,6 +17,8 @@ from .utils import (
     record_success_email_sent,
     should_send_success_email,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class EmailNotifier:
@@ -65,7 +69,8 @@ class EmailNotifier:
             smtp_cls = smtplib.SMTP_SSL
         else:
             smtp_cls = smtplib.SMTP
-        with smtp_cls(smtp.host, smtp.port, timeout=30) as client:
+        client = smtp_cls(smtp.host, smtp.port, timeout=30)
+        try:
             client.ehlo()
             if smtp.use_starttls and not smtp.use_ssl:
                 client.starttls()
@@ -73,6 +78,23 @@ class EmailNotifier:
             if smtp.username:
                 client.login(smtp.username, smtp.password or "")
             client.send_message(message)
+        except Exception:
+            raise
+        else:
+            try:
+                client.quit()
+            except smtplib.SMTPResponseException as exc:
+                logger.warning(
+                    "SMTP server error during quit (%s): %s",
+                    exc.smtp_code,
+                    exc.smtp_error,
+                    exc_info=False,
+                )
+            except smtplib.SMTPException as exc:
+                logger.warning("SMTP error during quit: %s", exc, exc_info=False)
+        finally:
+            with suppress(Exception):
+                client.close()
 
     def send_success(
         self,
@@ -88,7 +110,11 @@ class EmailNotifier:
         ):
             return False
         message = self._build_message(subject, body)
-        self._send(message)
+        try:
+            self._send(message)
+        except (smtplib.SMTPException, OSError):
+            logger.exception("Failed to send success notification email")
+            return False
         if self._config.notify.success_email_once_per_day:
             record_success_email_sent(self._config.meta_dir, now)
         return True
@@ -103,5 +129,9 @@ class EmailNotifier:
         if not self.enabled or not self._config.notify.email_on_failure_always:
             return False
         message = self._build_message(subject, body, attachments=attachments)
-        self._send(message)
+        try:
+            self._send(message)
+        except (smtplib.SMTPException, OSError):
+            logger.exception("Failed to send failure notification email")
+            return False
         return True
