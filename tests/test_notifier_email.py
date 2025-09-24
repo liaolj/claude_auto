@@ -15,8 +15,9 @@ from src.config import (
     SelectorConfig,
     SiteConfig,
     SMTPConfig,
-)
+    )
 from src.notifier_email import EmailNotifier
+from smtplib import SMTPResponseException
 
 
 @pytest.fixture
@@ -87,6 +88,24 @@ def test_send_success_respects_daily_limit(config_with_email, monkeypatch) -> No
     assert notifier.send_success("Subject", "Body") is False
 
 
+def test_send_success_handles_smtp_error(config_with_email, monkeypatch) -> None:
+    notifier = EmailNotifier(config_with_email, tz=None)
+    monkeypatch.setattr("src.notifier_email.should_send_success_email", lambda *_: True)
+
+    recorded: List[Path] = []
+    monkeypatch.setattr("src.notifier_email.record_success_email_sent", lambda meta_dir, now: recorded.append(meta_dir))
+
+    def raise_error(self, message):
+        raise SMTPResponseException(451, b"temporary failure")
+
+    monkeypatch.setattr(EmailNotifier, "_send", raise_error)
+
+    result = notifier.send_success("Subject", "Body")
+
+    assert result is False
+    assert recorded == []
+
+
 def test_send_failure_with_attachments(config_with_email, tmp_path, monkeypatch) -> None:
     notifier = EmailNotifier(config_with_email, tz=None)
     attachment = tmp_path / "failure.png"
@@ -109,3 +128,16 @@ def test_send_failure_skips_when_disabled(config_with_email) -> None:
     notifier = EmailNotifier(config_with_email, tz=None)
     notifier._config.notify.email_on_failure_always = False
     assert notifier.send_failure("Subject", "Body") is False
+
+
+def test_send_failure_handles_smtp_error(config_with_email, monkeypatch) -> None:
+    notifier = EmailNotifier(config_with_email, tz=None)
+
+    def raise_error(self, message):
+        raise SMTPResponseException(451, b"temporary failure")
+
+    monkeypatch.setattr(EmailNotifier, "_send", raise_error)
+
+    result = notifier.send_failure("Subject", "Body")
+
+    assert result is False
