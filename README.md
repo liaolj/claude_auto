@@ -26,7 +26,8 @@ systemd/anyrouter.*     # systemd service + timer
 4. 根据实际账号信息编辑 `config.toml`：
    * 更新 SMTP 主机、账号、收件人；
    * 如果站点文案/选择器有变化，调整 `[selectors]` 中的策略；
-   * 根据需求修改重试、超时与调度时间。
+   * 根据需求修改重试、超时与调度时间；
+   * `run.browser_locale` 默认强制英文界面并附带优化后的 Chromium 启动参数，如需自定义语言可同时调整 `run.accept_language` 与 `run.chromium_launch_args`。
 
 ## 首次授权（GitHub OAuth）
 

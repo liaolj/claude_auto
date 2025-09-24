@@ -5,6 +5,7 @@ import sys
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
+from .browser import launch_user_context
 from .config import load_config
 from .logging_setup import setup_logging
 from .utils import (
@@ -35,13 +36,8 @@ def main() -> int:
     context = None
     try:
         with sync_playwright() as p:
-            context = p.chromium.launch_persistent_context(
-                user_data_dir=str(config.userdata_dir),
-                headless=False,
-            )
+            context = launch_user_context(p, config, headless=False)
             page = context.new_page()
-            page.set_default_navigation_timeout(config.run.nav_timeout_ms)
-            page.set_default_timeout(config.run.action_timeout_ms)
             logger.info("Navigating to base URL", extra={"step": "navigate", "url": config.site.base_url})
             try:
                 page.goto(config.site.base_url, wait_until="networkidle", timeout=config.run.nav_timeout_ms)
