@@ -1,6 +1,7 @@
 """Email notification helpers."""
 from __future__ import annotations
 
+import logging
 import mimetypes
 import smtplib
 from email.message import EmailMessage
@@ -15,6 +16,8 @@ from .utils import (
     record_success_email_sent,
     should_send_success_email,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class EmailNotifier:
@@ -88,7 +91,11 @@ class EmailNotifier:
         ):
             return False
         message = self._build_message(subject, body)
-        self._send(message)
+        try:
+            self._send(message)
+        except (smtplib.SMTPException, OSError):
+            logger.exception("Failed to send success notification email")
+            return False
         if self._config.notify.success_email_once_per_day:
             record_success_email_sent(self._config.meta_dir, now)
         return True
@@ -103,5 +110,9 @@ class EmailNotifier:
         if not self.enabled or not self._config.notify.email_on_failure_always:
             return False
         message = self._build_message(subject, body, attachments=attachments)
-        self._send(message)
+        try:
+            self._send(message)
+        except (smtplib.SMTPException, OSError):
+            logger.exception("Failed to send failure notification email")
+            return False
         return True
