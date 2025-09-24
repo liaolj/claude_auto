@@ -1,0 +1,12 @@
+[Unit]
+Description=Run AnyRouter Check-in at 08:30, 12:30, 20:30 (Europe/Helsinki)
+
+[Timer]
+OnCalendar=Mon..Sun 08:30
+OnCalendar=Mon..Sun 12:30
+OnCalendar=Mon..Sun 20:30
+Persistent=true
+Unit=anyrouter.service
+
+[Install]
+WantedBy=timers.target
