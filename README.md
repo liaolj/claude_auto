@@ -114,6 +114,16 @@ python -m src.signin
 3. 若 systemd 没有触发，使用 `systemctl status anyrouter.timer` 查看状态，并确认 `TZ` 一致；
 4. 当页面元素改动时，更新 `config.toml` 中 `[selectors]`，可使用多策略定位（CSS / text / role）。
 
+## 测试与质量保证
+
+项目附带了覆盖配置解析、状态判定、邮件通知以及签到主流程的 pytest 测试套件，并在 GitHub Actions（`.github/workflows/tests.yml`）中默认运行。开发与部署前可通过以下命令本地验证：
+
+```bash
+pytest
+```
+
+如需在 CI 之外执行，可于虚拟环境中安装 `pytest`（`pip install pytest`）后运行上述命令。
+
 ## 安全提示
 
 * `config.toml` 中的 SMTP 凭据应限制权限（推荐 600）；
