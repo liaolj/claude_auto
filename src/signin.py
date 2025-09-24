@@ -60,24 +60,41 @@ def _attempt_checkin(
     headless: bool,
 ) -> CheckInOutcome:
     page = None
-    context = None
     try:
         with sync_playwright() as playwright:
-            context = launch_user_context(playwright, config, headless=headless)
-            page = context.new_page()
-            logger.info(
-                "Navigating to check-in page",
-                extra={"step": "navigate", "url": config.site.checkin_url, "attempt": attempt},
-            )
+            context = None
             try:
-                page.goto(config.site.checkin_url, wait_until="networkidle", timeout=config.run.nav_timeout_ms)
-            except PlaywrightTimeoutError as exc:
-                raise SignInError("NAV_TIMEOUT", "Timed out waiting for page load") from exc
+                context = launch_user_context(playwright, config, headless=headless)
+                page = context.new_page()
+                logger.info(
+                    "Navigating to check-in page",
+                    extra={"step": "navigate", "url": config.site.checkin_url, "attempt": attempt},
+                )
+                try:
+                    page.goto(
+                        config.site.checkin_url,
+                        wait_until="networkidle",
+                        timeout=config.run.nav_timeout_ms,
+                    )
+                except PlaywrightTimeoutError as exc:
+                    raise SignInError("NAV_TIMEOUT", "Timed out waiting for page load") from exc
 
-            ensure_logged_in(page, config)
-            outcome = perform_checkin(page, config)
-            logger.info("Outcome", extra={"result": outcome.status, "attempt": attempt, "url": page.url})
-            return outcome
+                ensure_logged_in(page, config)
+                outcome = perform_checkin(page, config)
+                logger.info(
+                    "Outcome", extra={"result": outcome.status, "attempt": attempt, "url": page.url}
+                )
+                return outcome
+            finally:
+                if context is not None:
+                    try:
+                        context.close()
+                    except Exception as close_exc:  # pragma: no cover - defensive
+                        logger.warning(
+                            "Failed to close browser context cleanly",
+                            extra={"step": "cleanup", "attempt": attempt},
+                            exc_info=close_exc,
+                        )
     except SignInError as exc:
         screenshot_path = _capture_failure_artifacts(page, config, run_id, tz, attempt=attempt, error_code=exc.error_code)
         exc.screenshot_path = screenshot_path
@@ -92,9 +109,6 @@ def _attempt_checkin(
         screenshot_path = _capture_failure_artifacts(page, config, run_id, tz, attempt=attempt, error_code=error.error_code)
         error.screenshot_path = screenshot_path
         raise error from exc
-    finally:
-        if context is not None:
-            context.close()
 
 
 def main() -> int:
