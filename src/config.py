@@ -36,6 +36,17 @@ class ScheduleConfig:
     times: Sequence[str] = field(default_factory=lambda: ("08:30", "12:30", "20:30"))
 
 
+DEFAULT_BROWSER_LOCALE = "en-US"
+DEFAULT_CHROMIUM_ARGS: Sequence[str] = (
+    "--disable-extensions",
+    "--disable-component-extensions-with-background-pages",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--no-default-browser-check",
+    "--no-first-run",
+)
+
+
 @dataclass
 class RunConfig:
     headless_preferred: bool = True
@@ -49,6 +60,9 @@ class RunConfig:
     trace_on_failure: bool = False
     log_max_bytes: int = 1_000_000
     log_backup_count: int = 7
+    chromium_launch_args: Sequence[str] = field(default_factory=lambda: tuple(DEFAULT_CHROMIUM_ARGS))
+    browser_locale: str = DEFAULT_BROWSER_LOCALE
+    accept_language: Optional[str] = None
 
 
 @dataclass
@@ -119,6 +133,15 @@ def _load_schedule(data: Dict[str, Any]) -> ScheduleConfig:
 
 def _load_run(data: Dict[str, Any]) -> RunConfig:
     retry_backoff = data.get("retry_backoff_seconds") or (1.0, 4.0, 9.0)
+    raw_launch_args = data.get("chromium_launch_args")
+    launch_args: Sequence[str]
+    if raw_launch_args is None:
+        launch_args = DEFAULT_CHROMIUM_ARGS
+    else:
+        launch_args = tuple(str(arg) for arg in raw_launch_args)
+    raw_accept_language = data.get("accept_language")
+    accept_language = str(raw_accept_language) if raw_accept_language else None
+    raw_locale = data.get("browser_locale") or DEFAULT_BROWSER_LOCALE
     return RunConfig(
         headless_preferred=bool(data.get("headless_preferred", True)),
         fallback_to_headed_on_retry=bool(data.get("fallback_to_headed_on_retry", True)),
@@ -131,6 +154,9 @@ def _load_run(data: Dict[str, Any]) -> RunConfig:
         trace_on_failure=bool(data.get("trace_on_failure", False)),
         log_max_bytes=int(data.get("log_max_bytes", 1_000_000)),
         log_backup_count=int(data.get("log_backup_count", 7)),
+        chromium_launch_args=launch_args,
+        browser_locale=str(raw_locale),
+        accept_language=accept_language,
     )
 
 

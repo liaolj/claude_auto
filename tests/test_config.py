@@ -34,6 +34,9 @@ max_retries = 5
 retry_backoff_seconds = [1.5, 3.0, 6.0]
 history_limit = 50
 screenshot_on_failure = false
+browser_locale = "en-GB"
+chromium_launch_args = ["--foo", "--lang=en-GB"]
+accept_language = "en-GB,en;q=0.7"
 
 [selectors]
 login_required = ["#login"]
@@ -68,6 +71,9 @@ def test_load_config_expands_paths(tmp_path: Path) -> None:
     assert config.notify.smtp.use_starttls is True
     assert config.notify.smtp.recipients == ("ops@example.com", "alerts@example.com")
     assert config.run.retry_backoff_seconds == (1.5, 3.0, 6.0)
+    assert config.run.browser_locale == "en-GB"
+    assert config.run.chromium_launch_args == ("--foo", "--lang=en-GB")
+    assert config.run.accept_language == "en-GB,en;q=0.7"
     assert config.selectors.login_required == ("#login",)
 
 
