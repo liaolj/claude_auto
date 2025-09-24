@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 import smtplib
+from contextlib import suppress
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Iterable, Optional
@@ -68,7 +69,8 @@ class EmailNotifier:
             smtp_cls = smtplib.SMTP_SSL
         else:
             smtp_cls = smtplib.SMTP
-        with smtp_cls(smtp.host, smtp.port, timeout=30) as client:
+        client = smtp_cls(smtp.host, smtp.port, timeout=30)
+        try:
             client.ehlo()
             if smtp.use_starttls and not smtp.use_ssl:
                 client.starttls()
@@ -76,6 +78,23 @@ class EmailNotifier:
             if smtp.username:
                 client.login(smtp.username, smtp.password or "")
             client.send_message(message)
+        except Exception:
+            raise
+        else:
+            try:
+                client.quit()
+            except smtplib.SMTPResponseException as exc:
+                logger.warning(
+                    "SMTP server error during quit (%s): %s",
+                    exc.smtp_code,
+                    exc.smtp_error,
+                    exc_info=False,
+                )
+            except smtplib.SMTPException as exc:
+                logger.warning("SMTP error during quit: %s", exc, exc_info=False)
+        finally:
+            with suppress(Exception):
+                client.close()
 
     def send_success(
         self,

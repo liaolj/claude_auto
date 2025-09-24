@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from email.message import EmailMessage
 from pathlib import Path
 from typing import List
@@ -105,6 +106,58 @@ def test_send_success_handles_smtp_error(config_with_email, monkeypatch) -> None
     assert result is False
     assert recorded == []
 
+
+def test_send_success_ignores_quit_error(config_with_email, monkeypatch, caplog) -> None:
+    notifier = EmailNotifier(config_with_email, tz=None)
+    monkeypatch.setattr("src.notifier_email.should_send_success_email", lambda *_: True)
+
+    recorded: List[Path] = []
+    monkeypatch.setattr(
+        "src.notifier_email.record_success_email_sent",
+        lambda meta_dir, now: recorded.append(meta_dir),
+    )
+
+    class DummySMTP:
+        instances: List["DummySMTP"] = []
+
+        def __init__(self, host, port, timeout=30):
+            self.host = host
+            self.port = port
+            self.timeout = timeout
+            self.messages: List[EmailMessage] = []
+            self.closed = False
+            DummySMTP.instances.append(self)
+
+        def ehlo(self):
+            return None
+
+        def starttls(self):
+            return None
+
+        def login(self, username, password):
+            self.credentials = (username, password)
+            return None
+
+        def send_message(self, message):
+            self.messages.append(message)
+            return {}
+
+        def quit(self):
+            raise SMTPResponseException(-1, b"\x00\x00\x00")
+
+        def close(self):
+            self.closed = True
+
+    monkeypatch.setattr("src.notifier_email.smtplib.SMTP_SSL", DummySMTP)
+    monkeypatch.setattr("src.notifier_email.smtplib.SMTP", DummySMTP)
+
+    with caplog.at_level(logging.WARNING):
+        result = notifier.send_success("Subject", "Body")
+
+    assert result is True
+    assert recorded == [config_with_email.meta_dir]
+    assert DummySMTP.instances and DummySMTP.instances[0].messages
+    assert any("SMTP server error during quit" in rec.message for rec in caplog.records)
 
 def test_send_failure_with_attachments(config_with_email, tmp_path, monkeypatch) -> None:
     notifier = EmailNotifier(config_with_email, tz=None)
