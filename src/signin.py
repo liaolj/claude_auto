@@ -7,6 +7,7 @@ from pathlib import Path
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
+from .browser import launch_user_context
 from .config import Config, load_config
 from .logging_setup import setup_logging
 from .notifier_email import EmailNotifier
@@ -62,13 +63,8 @@ def _attempt_checkin(
     context = None
     try:
         with sync_playwright() as playwright:
-            context = playwright.chromium.launch_persistent_context(
-                user_data_dir=str(config.userdata_dir),
-                headless=headless,
-            )
+            context = launch_user_context(playwright, config, headless=headless)
             page = context.new_page()
-            page.set_default_navigation_timeout(config.run.nav_timeout_ms)
-            page.set_default_timeout(config.run.action_timeout_ms)
             logger.info(
                 "Navigating to check-in page",
                 extra={"step": "navigate", "url": config.site.checkin_url, "attempt": attempt},
